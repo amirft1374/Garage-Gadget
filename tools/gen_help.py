@@ -24,7 +24,9 @@ FENCE = BACKTICK * 3
 
 # (file, default category, {section titles to drop})
 SOURCES = [
-    ('README.md', None, {'Contents'}),
+    # 'Quick start' is the repository's landing section; the device's own
+    # Help covers the same ground in more depth, so it is not duplicated.
+    ('README.md', None, {'Contents', 'Quick start'}),
     ('TELEGRAM.md', 'Notifications', set()),
     (os.path.join('homeassistant', 'README.md'), 'Home Assistant', set()),
     (os.path.join('grafana', 'README.md'), 'Dashboards', set()),
