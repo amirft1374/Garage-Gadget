@@ -3,6 +3,18 @@
 Issues and pull requests are welcome. Please read this first — it will save
 you writing code that cannot be merged.
 
+## Licence
+
+This project is **not open source**. It is published for reference and
+discussion under the terms in [LICENSE](LICENSE): you may read it, fork it
+here, and build it for your own private use, but not redistribute it or use
+it commercially without permission.
+
+By opening a pull request you license your contribution to the project
+maintainer, as set out at the end of that file. You keep the copyright in
+your own work. If you would rather not grant that, open an issue describing
+the change and it can be implemented separately.
+
 ## How decisions are made
 
 This firmware runs on hardware that moves a heavy door. Every change is

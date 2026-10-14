@@ -1,0 +1,40 @@
+Copyright (c) 2026 Amir F. All rights reserved.
+
+This software and its documentation are made publicly readable for reference,
+evaluation and discussion. They are not released under an open-source licence.
+
+You MAY:
+
+  - View, read and clone this repository.
+  - Fork it on GitHub and propose changes through a pull request.
+  - Build the firmware and run it on hardware you own, for your own private,
+    non-commercial use.
+
+You MAY NOT, without prior written permission from the copyright holder:
+
+  - Redistribute this software, in source or compiled form, modified or
+    unmodified.
+  - Use it, or any part of it, in a product or service offered to others,
+    whether sold, licensed or given away.
+  - Use it in any commercial setting.
+  - Remove or alter this notice.
+
+Contributions: by opening a pull request you grant the copyright holder a
+perpetual, worldwide, irrevocable, royalty-free licence to use, modify,
+sublicense and distribute your contribution as part of this project, under
+this or any future licence the project adopts. You keep the copyright in your
+own work. If you cannot grant that, please open an issue describing the
+change instead of sending code.
+
+No warranty: this software is provided "as is", without warranty of any kind,
+express or implied, including but not limited to the warranties of
+merchantability, fitness for a particular purpose and non-infringement. In no
+event shall the copyright holder be liable for any claim, damages or other
+liability arising from the software or its use.
+
+Safety: this firmware controls a powered door. It is provided for use at your
+own risk, and the copyright holder accepts no liability for injury, damage or
+loss arising from its use, misuse or failure.
+
+For permission to use this software beyond the terms above, or to discuss
+licensing, open an issue on this repository.
