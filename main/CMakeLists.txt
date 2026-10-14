@@ -1,8 +1,7 @@
 #
-# No EMBED_TXTFILES here, and that is the point: the old build baked
-# secrets.json into the image, so every customer needed their own binary.
-# All configuration now lives in NVS and is entered through the setup
-# wizard, so one firmware image serves every unit.
+# No EMBED_TXTFILES, deliberately: nothing user-specific is compiled in.
+# All configuration lives in NVS and is entered through the setup wizard,
+# so one firmware image serves every unit.
 #
 idf_component_register(
     SRCS

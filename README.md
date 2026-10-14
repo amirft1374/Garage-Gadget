@@ -8,8 +8,8 @@ your phone.
 
 **One firmware image serves every unit.** Nothing is compiled in: the owner
 configures Wi-Fi, credentials, dashboards and alerts through a setup wizard
-on first power-up, and everything is stored in NVS. No `secrets.json`, no
-per-customer build.
+on first power-up, and everything is stored in NVS. No per-customer build,
+and no credentials anywhere in the source tree.
 
 ---
 
@@ -25,7 +25,6 @@ per-customer build.
 8. [When something goes wrong](#8-when-something-goes-wrong)
 9. [Building and flashing](#9-building-and-flashing)
 10. [How the firmware is organised](#10-how-the-firmware-is-organised)
-11. [Changes from the NFC_CHECK prototype](#11-changes-from-the-nfc_check-prototype)
 
 See also: **[homeassistant/](homeassistant/)** for Home Assistant,
 **[TELEGRAM.md](TELEGRAM.md)** for notification setup, and
@@ -639,30 +638,3 @@ Design rules worth keeping if you extend this:
   `app_settings.c` and one input with a matching `data-k` in the HTML.
   Load, save, API and UI follow automatically.
 
----
-
-## 11. Changes from the NFC_CHECK prototype
-
-**NFC is gone.** No RC522, no SPI reader, no tag payloads, no "arm write" /
-"cancel write" buttons, no `abobija/rc522` dependency. That becomes its own
-product.
-
-**No compiled-in secrets.** `secrets.json` and `app_secrets.c` are deleted.
-`main/CMakeLists.txt` no longer embeds anything. Everything the old build
-baked into the image is now entered by the owner and stored in NVS.
-
-**Setup wizard and hardware recovery** replace editing a JSON file and
-reflashing.
-
-**On-device history and dashboard** — the prototype's "last 5 event times"
-table becomes a real charted history that does not need InfluxDB or Grafana.
-
-**Direct phone notifications** — the prototype could only raise an alarm by
-writing to InfluxDB and having Grafana notice.
-
-**Token auth** replaces `?code=<password>` in URLs. **Bounded Wi-Fi retry with backoff** replaces a fixed 5-minute reconnect timer. **A revised
-partition table** adds the `history` partition.
-
-**Deliberately unchanged:** the InfluxDB measurement and event names,
-including the `ImmidiateAlarm` misspelling. Correcting it would break every
-existing Grafana alert and dashboard in the field for a cosmetic gain.

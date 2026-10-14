@@ -1,4 +1,3 @@
-## The RC522/NFC component is deliberately absent: NFC has been split out
 ## of this product into its own project.
 dependencies:
   idf:

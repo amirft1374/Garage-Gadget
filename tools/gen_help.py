@@ -43,7 +43,6 @@ CATEGORY = {
     'When something goes wrong': 'Troubleshooting',
     'Building and flashing': 'Reference',
     'How the firmware is organised': 'Reference',
-    'Changes from the NFC_CHECK prototype': 'Reference',
 }
 
 CATEGORY_ORDER = ['Getting started', 'Using it', 'Notifications',

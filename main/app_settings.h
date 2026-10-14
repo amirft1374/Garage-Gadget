@@ -3,7 +3,7 @@
 /*
  * app_settings.h — All user configuration, persisted in NVS.
  *
- * Replaces the old compile-time `secrets.json` embedding.  Nothing here is
+ * Nothing user-specific is compiled in.  Nothing here is
  * baked into the firmware: one binary serves every customer, and each unit
  * is configured through the setup wizard / Settings tab.
  *
