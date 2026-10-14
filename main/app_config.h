@@ -14,7 +14,7 @@
  */
 
 /* ── Product identity ────────────────────────────────────────────────── */
-#define APP_SW_VERSION              "2.0.0"
+#define APP_SW_VERSION              "2.1.0"
 #define APP_PRODUCT_NAME            "Garage Gadget"
 
 /* ── Project home ───────────────────────────────────────── *
