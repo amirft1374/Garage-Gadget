@@ -1,0 +1,11 @@
+## The RC522/NFC component is deliberately absent: NFC has been split out
+## of this product into its own project.
+dependencies:
+  idf:
+    version: ">=5.3"
+  # 3.0 is the floor: `color_component_format` (used in led_rgb.c) does not
+  # exist in the 2.x API.
+  espressif/led_strip:
+    version: "^3.0"
+  espressif/mdns:
+    version: "^1.2"

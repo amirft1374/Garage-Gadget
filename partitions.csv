@@ -1,0 +1,17 @@
+# Garage Gadget partition table — 16 MB flash.
+#
+# Two 3 MB app slots give room for OTA. The `history` partition is the
+# on-device event log: a 1 MB ring of 16-byte records, so ~65,000 events.
+# At a busy 100 events/day that is well over a year of retention, which is
+# why the firmware can promise "last 10 days" without ever touching NVS.
+#
+# NVS stays at the stock offset and size — it only holds settings (~2 KB),
+# and keeping it standard means the bootloader and OTA behave normally.
+#
+# Name,     Type, SubType,  Offset,   Size,     Flags
+nvs,        data, nvs,      0x9000,   0x6000,
+otadata,    data, ota,      0xf000,   0x2000,
+phy_init,   data, phy,      0x11000,  0x1000,
+ota_0,      app,  ota_0,    0x20000,  0x300000,
+ota_1,      app,  ota_1,    0x320000, 0x300000,
+history,    data, 0x40,     0x620000, 0x100000,

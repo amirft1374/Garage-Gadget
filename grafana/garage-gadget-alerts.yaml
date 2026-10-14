@@ -1,0 +1,370 @@
+# ═══════════════════════════════════════════════════════════════════════
+# Garage Gadget — Grafana alert rules
+#
+# Optional. The device can already notify your phone by itself (Telegram or
+# ntfy, configured in its Settings tab) with no Grafana involved. Use these
+# rules if you would rather have Grafana own alerting — for example to route
+# alerts through an existing on-call policy, or to alert on the device going
+# offline, which the device obviously cannot report itself.
+#
+# ── Before importing: replace two placeholders ────────────────────────────
+#
+#   REPLACE_WITH_INFLUXDB_UID   your InfluxDB data source UID.
+#                               Find it at Connections > Data sources > (your
+#                               InfluxDB); the UID is the last path segment
+#                               of the browser URL.
+#
+#   REPLACE_WITH_BUCKET         the bucket name your device writes to (the
+#                               same value as in the device's Settings tab).
+#
+# PowerShell:
+#   (Get-Content garage-gadget-alerts.yaml) `
+#     -replace 'REPLACE_WITH_INFLUXDB_UID','abc123' `
+#     -replace 'REPLACE_WITH_BUCKET','Home' |
+#     Set-Content garage-gadget-alerts-ready.yaml
+#
+# bash:
+#   sed -e 's/REPLACE_WITH_INFLUXDB_UID/abc123/g' \
+#       -e 's/REPLACE_WITH_BUCKET/Home/g' \
+#       garage-gadget-alerts.yaml > garage-gadget-alerts-ready.yaml
+#
+# ── Importing ─────────────────────────────────────────────────────────────
+#
+#   Grafana 11+ UI : Alerting > Alert rules > "Import alert rules" and paste
+#                    the edited YAML.
+#   Grafana OSS    : drop the edited file in
+#                    /etc/grafana/provisioning/alerting/ and restart Grafana.
+#   API            : POST it to /api/v1/provisioning/alert-rules/export ...
+#                    see the Grafana provisioning docs.
+#
+# ── Notifications ─────────────────────────────────────────────────────────
+#
+# No `notification_settings` block is set on any rule, so all four route
+# through your default notification policy. To send a rule somewhere
+# specific, add this under the rule (same indent as `labels:`):
+#
+#     notification_settings:
+#       receiver: <your contact point name>
+#
+# The `severity` labels below are there so you can route on them instead.
+# ═══════════════════════════════════════════════════════════════════════
+
+apiVersion: 1
+
+groups:
+  - orgId: 1
+    name: Garage Gadget
+    folder: Garage Gadget
+    interval: 1m
+    rules:
+
+      # ───────────────────────────────────────────────────────────────────
+      # 1. Left Open Alarm
+      #
+      # Mirrors the device's own Left Open Alarm. The device publishes a
+      # counter: 1 after the door has been open for one auto-close delay,
+      # 2 after two, and so on, back to 0 when the door closes. Anything
+      # other than 0 means the door is still open past its delay.
+      # ───────────────────────────────────────────────────────────────────
+      - uid: garage-gadget-left-open
+        title: Garage left open
+        condition: C
+        for: 0m
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: REPLACE_WITH_INFLUXDB_UID
+            model:
+              refId: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              query: |
+                from(bucket: "REPLACE_WITH_BUCKET")
+                  |> range(start: -30d)
+                  |> filter(fn: (r) => r._measurement == "system_event")
+                  |> filter(fn: (r) => r.event == "LeftOpenAlarm")
+                  |> keep(columns: ["_time", "_value"])
+                  |> last()
+                  |> toFloat()
+          - refId: B
+            queryType: expression
+            datasourceUid: __expr__
+            model:
+              refId: B
+              type: reduce
+              expression: A
+              reducer: last
+              intervalMs: 1000
+              maxDataPoints: 43200
+          - refId: C
+            queryType: expression
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: B
+              intervalMs: 1000
+              maxDataPoints: 43200
+              conditions:
+                - evaluator:
+                    type: ne
+                    params:
+                      - 0
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - C
+                  reducer:
+                    type: last
+                    params: []
+                  type: query
+        # KeepLast: a gap in telemetry should not silently clear a live alarm.
+        noDataState: KeepLast
+        execErrState: Error
+        annotations:
+          summary: The garage door has been left open.
+          description: >-
+            The Left Open Alarm counter is non-zero, which means the door has
+            stayed open past its auto-close delay. Check the Garage Gadget
+            dashboard for how long.
+        labels:
+          severity: warning
+          component: garage-door
+        isPaused: false
+
+      # ───────────────────────────────────────────────────────────────────
+      # 2. Immediate Alarm
+      #
+      # Fires the moment the door opens while the device's Immediate Alarm
+      # is armed — i.e. the "the garage should not be opening right now"
+      # alarm. Publishes 1 on open and 0 on close.
+      # ───────────────────────────────────────────────────────────────────
+      - uid: garage-gadget-immediate
+        title: Garage opened (Immediate Alarm)
+        condition: C
+        for: 0m
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: REPLACE_WITH_INFLUXDB_UID
+            model:
+              refId: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              query: |
+                from(bucket: "REPLACE_WITH_BUCKET")
+                  |> range(start: -30d)
+                  |> filter(fn: (r) => r._measurement == "system_event")
+                  |> filter(fn: (r) => r.event == "ImmidiateAlarm")
+                  |> keep(columns: ["_time", "_value"])
+                  |> last()
+                  |> toFloat()
+          - refId: B
+            queryType: expression
+            datasourceUid: __expr__
+            model:
+              refId: B
+              type: reduce
+              expression: A
+              reducer: last
+              intervalMs: 1000
+              maxDataPoints: 43200
+          - refId: C
+            queryType: expression
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: B
+              intervalMs: 1000
+              maxDataPoints: 43200
+              conditions:
+                - evaluator:
+                    type: eq
+                    params:
+                      - 1
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - C
+                  reducer:
+                    type: last
+                    params: []
+                  type: query
+        noDataState: KeepLast
+        execErrState: Error
+        annotations:
+          summary: The garage door has been opened.
+          description: >-
+            The Immediate Alarm is armed on the device and the door was
+            opened. It clears automatically when the door closes.
+        labels:
+          severity: critical
+          component: garage-door
+        isPaused: false
+
+      # ───────────────────────────────────────────────────────────────────
+      # 3. Door open too long — independent of the device's own alarms
+      #
+      # Reads the raw door position (1 = closed, 0 = open) rather than an
+      # alarm event, so it still fires if someone disarmed the alarms on the
+      # device. `for: 15m` is the "how long is too long" knob — change it to
+      # taste.
+      # ───────────────────────────────────────────────────────────────────
+      - uid: garage-gadget-open-15m
+        title: Garage open for more than 15 minutes
+        condition: C
+        for: 15m
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 3600
+              to: 0
+            datasourceUid: REPLACE_WITH_INFLUXDB_UID
+            model:
+              refId: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              query: |
+                from(bucket: "REPLACE_WITH_BUCKET")
+                  |> range(start: -1h)
+                  |> filter(fn: (r) => r._measurement == "garage door position")
+                  |> filter(fn: (r) => r._field == "value")
+                  |> keep(columns: ["_time", "_value"])
+                  |> last()
+                  |> toFloat()
+          - refId: B
+            queryType: expression
+            datasourceUid: __expr__
+            model:
+              refId: B
+              type: reduce
+              expression: A
+              reducer: last
+              intervalMs: 1000
+              maxDataPoints: 43200
+          - refId: C
+            queryType: expression
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: B
+              intervalMs: 1000
+              maxDataPoints: 43200
+              conditions:
+                - evaluator:
+                    # 0 = open. Position is reported every second, so this is
+                    # a live reading, not an event.
+                    type: eq
+                    params:
+                      - 0
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - C
+                  reducer:
+                    type: last
+                    params: []
+                  type: query
+        # NoData here means the device is unreachable, which rule 4 covers.
+        # Don't double-alert for it.
+        noDataState: NoData
+        execErrState: Error
+        annotations:
+          summary: The garage door has been open for over 15 minutes.
+          description: >-
+            Reported directly from the door sensor, independently of whether
+            the device's own alarms are armed.
+        labels:
+          severity: warning
+          component: garage-door
+        isPaused: false
+
+      # ───────────────────────────────────────────────────────────────────
+      # 4. Device offline
+      #
+      # The one alert the device genuinely cannot raise for itself. Measures
+      # how many seconds have passed since its last telemetry point; the
+      # device reports every second, so 10 minutes of silence is decisive.
+      #
+      # `noDataState: Alerting` covers the harder case of a device that has
+      # not reported at all within the query window.
+      # ───────────────────────────────────────────────────────────────────
+      - uid: garage-gadget-offline
+        title: Garage Gadget offline
+        condition: C
+        for: 5m
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 86400
+              to: 0
+            datasourceUid: REPLACE_WITH_INFLUXDB_UID
+            model:
+              refId: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              query: |
+                from(bucket: "REPLACE_WITH_BUCKET")
+                  |> range(start: -24h)
+                  |> filter(fn: (r) => r._measurement == "wifi_status_garage_door")
+                  |> filter(fn: (r) => r._field == "rssi")
+                  |> last()
+                  |> map(fn: (r) => ({
+                      _time: r._time,
+                      _value: float(v: uint(v: now()) - uint(v: r._time)) / 1000000000.0
+                    }))
+          - refId: B
+            queryType: expression
+            datasourceUid: __expr__
+            model:
+              refId: B
+              type: reduce
+              expression: A
+              reducer: last
+              intervalMs: 1000
+              maxDataPoints: 43200
+          - refId: C
+            queryType: expression
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: B
+              intervalMs: 1000
+              maxDataPoints: 43200
+              conditions:
+                - evaluator:
+                    # seconds since the last telemetry point
+                    type: gt
+                    params:
+                      - 600
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - C
+                  reducer:
+                    type: last
+                    params: []
+                  type: query
+        noDataState: Alerting
+        execErrState: Error
+        annotations:
+          summary: The Garage Gadget has stopped reporting.
+          description: >-
+            No telemetry for over 10 minutes. The device has lost Wi-Fi, lost
+            power, or crashed. While it is offline the door position shown on
+            the dashboard is stale and no alarms will be raised.
+        labels:
+          severity: critical
+          component: garage-device
+        isPaused: false

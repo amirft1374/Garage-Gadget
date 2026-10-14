@@ -1,0 +1,1499 @@
+{
+  "__inputs": [
+    {
+      "name": "DS_INFLUXDB",
+      "label": "InfluxDB",
+      "description": "The InfluxDB data source (Flux query language) that your Garage Gadget writes to.",
+      "type": "datasource",
+      "pluginId": "influxdb",
+      "pluginName": "InfluxDB"
+    }
+  ],
+  "__requires": [
+    {
+      "type": "grafana",
+      "id": "grafana",
+      "name": "Grafana",
+      "version": "10.0.0"
+    },
+    {
+      "type": "datasource",
+      "id": "influxdb",
+      "name": "InfluxDB",
+      "version": "1.0.0"
+    },
+    {
+      "type": "panel",
+      "id": "stat",
+      "name": "Stat",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "timeseries",
+      "name": "Time series",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "state-timeline",
+      "name": "State timeline",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "barchart",
+      "name": "Bar chart",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "table",
+      "name": "Table",
+      "version": ""
+    }
+  ],
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "id": 1,
+      "type": "row",
+      "title": "At a glance",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Door",
+      "description": "Live position from the magnetic sensor. The device reports this every second.",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${DS_INFLUXDB}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 1
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${DS_INFLUXDB}"
+          },
+          "query": "from(bucket: \"${bucket}\")\n  |> range(start: -30d)\n  |> filter(fn: (r) => r._measurement == \"garage door position\" and r._field == \"value\")\n  |> filter(fn: (r) => r.device =~ /^${device:regex}$/ and r.SSID =~ /^${ssid:regex}$/)\n  |> last()\n  |> keep(columns: [\"_time\", \"_value\"])",
+          "refId": "A",
+          "hide": false
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "percentChangeColorMode": "standard"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": null,
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "OPEN",
+                  "color": "red",
+                  "index": 0
+                },
+                "1": {
+                  "text": "CLOSED",
+                  "color": "green",
+                  "index": 1
+                }
+              }
+            }
+          ],
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Last report",
+      "description": "How long ago the device last sent data. Anything over a couple of minutes means it is offline or has lost Wi-Fi — the door state shown above may be stale.",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${DS_INFLUXDB}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 4,
+        "y": 1
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${DS_INFLUXDB}"
+          },
+          "query": "from(bucket: \"${bucket}\")\n  |> range(start: -24h)\n  |> filter(fn: (r) => r._measurement == \"wifi_status_garage_door\" and r._field == \"rssi\")\n  |> filter(fn: (r) => r.device =~ /^${device:regex}$/ and r.SSID =~ /^${ssid:regex}$/)\n  |> last()\n  |> map(fn: (r) => ({ _time: r._time, _value: float(v: uint(v: now()) - uint(v: r._time)) / 1000000000.0 }))",
+          "refId": "A",
+          "hide": false
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "percentChangeColorMode": "standard"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "decimals": 0,
+          "mappings": [],
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 180
+              },
+              {
+                "color": "red",
+                "value": 600
+              }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Openings",
+      "description": "Number of times the door opened within the selected time range.",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${DS_INFLUXDB}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 8,
+        "y": 1
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${DS_INFLUXDB}"
+          },
+          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"system_event\" and r.event == \"door_opened\")\n  |> filter(fn: (r) => r.device =~ /^${device:regex}$/ and r.SSID =~ /^${ssid:regex}$/)\n  |> keep(columns: [\"_time\", \"_value\"])\n  |> count()",
+          "refId": "A",
+          "hide": false
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "percentChangeColorMode": "standard"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "mappings": [],
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Immediate Alarm",
+      "description": "Raised as soon as the door opens while this alarm is armed on the device. Clears automatically when the door closes.",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${DS_INFLUXDB}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 12,
+        "y": 1
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${DS_INFLUXDB}"
+          },
+          "query": "from(bucket: \"${bucket}\")\n  |> range(start: -30d)\n  |> filter(fn: (r) => r._measurement == \"system_event\" and r.event == \"ImmidiateAlarm\")\n  |> filter(fn: (r) => r.device =~ /^${device:regex}$/ and r.SSID =~ /^${ssid:regex}$/)\n  |> keep(columns: [\"_time\", \"_value\"])\n  |> last()\n  |> toFloat()",
+          "refId": "A",
+          "hide": false
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "percentChangeColorMode": "standard"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": null,
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "Clear",
+                  "color": "green",
+                  "index": 0
+                },
+                "1": {
+                  "text": "ALARM",
+                  "color": "red",
+                  "index": 1
+                }
+              }
+            }
+          ],
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "Left Open Alarm",
+      "description": "Counts how many auto-close delay periods the door has stayed open. 1 means it passed the delay once, 2 means twice, and so on.",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${DS_INFLUXDB}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 16,
+        "y": 1
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${DS_INFLUXDB}"
+          },
+          "query": "from(bucket: \"${bucket}\")\n  |> range(start: -30d)\n  |> filter(fn: (r) => r._measurement == \"system_event\" and r.event == \"LeftOpenAlarm\")\n  |> filter(fn: (r) => r.device =~ /^${device:regex}$/ and r.SSID =~ /^${ssid:regex}$/)\n  |> keep(columns: [\"_time\", \"_value\"])\n  |> last()\n  |> toFloat()",
+          "refId": "A",
+          "hide": false
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "percentChangeColorMode": "standard"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": null,
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "Clear",
+                  "color": "green",
+                  "index": 0
+                }
+              }
+            },
+            {
+              "type": "range",
+              "options": {
+                "from": 1,
+                "to": 99999,
+                "result": {
+                  "text": "LEFT OPEN",
+                  "color": "red",
+                  "index": 1
+                }
+              }
+            }
+          ],
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 7,
+      "type": "stat",
+      "title": "Wi-Fi signal",
+      "description": "Latest RSSI at the device. Below about -75 dBm the connection gets unreliable; consider moving the access point or adding a repeater.",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${DS_INFLUXDB}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 20,
+        "y": 1
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${DS_INFLUXDB}"
+          },
+          "query": "from(bucket: \"${bucket}\")\n  |> range(start: -24h)\n  |> filter(fn: (r) => r._measurement == \"wifi_status_garage_door\" and r._field == \"rssi\")\n  |> filter(fn: (r) => r.device =~ /^${device:regex}$/ and r.SSID =~ /^${ssid:regex}$/)\n  |> last()\n  |> keep(columns: [\"_time\", \"_value\"])",
+          "refId": "A",
+          "hide": false
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "percentChangeColorMode": "standard"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "dBm",
+          "decimals": 0,
+          "mappings": [],
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": -80
+              },
+              {
+                "color": "green",
+                "value": -67
+              }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 8,
+      "type": "row",
+      "title": "Door activity",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 5
+      },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 9,
+      "type": "state-timeline",
+      "title": "Door position over time",
+      "description": "Green is closed, red is open. Hover any band to see exactly when it started and how long it lasted.",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${DS_INFLUXDB}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 16,
+        "x": 0,
+        "y": 6
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${DS_INFLUXDB}"
+          },
+          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"garage door position\" and r._field == \"value\")\n  |> filter(fn: (r) => r.device =~ /^${device:regex}$/ and r.SSID =~ /^${ssid:regex}$/)\n  // `min` so that any OPEN reading inside a bucket wins: never smooth an\n  // opening away just because the door was mostly shut that minute.\n  |> aggregateWindow(every: v.windowPeriod, fn: min, createEmpty: false)\n  |> keep(columns: [\"_time\", \"_value\"])",
+          "refId": "A",
+          "hide": false
+        }
+      ],
+      "options": {
+        "mergeValues": true,
+        "showValue": "never",
+        "alignValue": "left",
+        "rowHeight": 0.9,
+        "perPage": 20,
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "OPEN",
+                  "color": "red",
+                  "index": 0
+                },
+                "1": {
+                  "text": "CLOSED",
+                  "color": "green",
+                  "index": 1
+                }
+              }
+            }
+          ],
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          },
+          "custom": {
+            "lineWidth": 0,
+            "fillOpacity": 90,
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 10,
+      "type": "barchart",
+      "title": "Openings per day",
+      "description": "How often the garage was opened each day. A sudden change in the pattern is usually the most interesting thing on this dashboard.",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${DS_INFLUXDB}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 6
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${DS_INFLUXDB}"
+          },
+          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"system_event\" and r.event == \"door_opened\")\n  |> filter(fn: (r) => r.device =~ /^${device:regex}$/ and r.SSID =~ /^${ssid:regex}$/)\n  |> keep(columns: [\"_time\", \"_value\"])\n  |> aggregateWindow(every: 1d, fn: count, createEmpty: true)\n  |> fill(value: 0)",
+          "refId": "A",
+          "hide": false
+        }
+      ],
+      "options": {
+        "orientation": "auto",
+        "xTickLabelRotation": 0,
+        "xTickLabelSpacing": 100,
+        "showValue": "auto",
+        "stacking": "none",
+        "groupWidth": 0.7,
+        "barWidth": 0.8,
+        "barRadius": 0,
+        "fullHighlight": false,
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          },
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "axisPlacement": "auto",
+            "axisLabel": "openings",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 11,
+      "type": "row",
+      "title": "Alarms and events",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 14
+      },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "Alarm history",
+      "description": "Every alarm the device raised and cleared. Immediate Alarm is 0 or 1; Left Open Alarm counts delay periods, so it steps up the longer the door stays open.",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${DS_INFLUXDB}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 15
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${DS_INFLUXDB}"
+          },
+          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"system_event\" and r.event == \"ImmidiateAlarm\")\n  |> filter(fn: (r) => r.device =~ /^${device:regex}$/ and r.SSID =~ /^${ssid:regex}$/)\n  |> keep(columns: [\"_time\", \"_value\"])\n  |> toFloat()",
+          "refId": "A",
+          "hide": false
+        },
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${DS_INFLUXDB}"
+          },
+          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"system_event\" and r.event == \"LeftOpenAlarm\")\n  |> filter(fn: (r) => r.device =~ /^${device:regex}$/ and r.SSID =~ /^${ssid:regex}$/)\n  |> keep(columns: [\"_time\", \"_value\"])\n  |> toFloat()",
+          "refId": "B",
+          "hide": false
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "min": 0,
+          "max": null,
+          "decimals": 0,
+          "mappings": [],
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 2,
+            "fillOpacity": 25,
+            "showPoints": "never",
+            "pointSize": 5,
+            "spanNulls": true,
+            "gradientMode": "opacity",
+            "axisPlacement": "auto",
+            "axisLabel": "",
+            "axisSoftMin": 0,
+            "barAlignment": 0,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            },
+            "insertNulls": false
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "A"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Immediate Alarm"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "B"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Left Open Alarm"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": 13,
+      "type": "table",
+      "title": "Event log",
+      "description": "Everything the device recorded: door movements, relay triggers from the web UI or the auto-close timer, alarms, and settings changes.",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${DS_INFLUXDB}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 15
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${DS_INFLUXDB}"
+          },
+          "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"system_event\")\n  |> filter(fn: (r) => r.device =~ /^${device:regex}$/ and r.SSID =~ /^${ssid:regex}$/)\n  |> keep(columns: [\"_time\", \"event\", \"_value\"])\n  |> sort(columns: [\"_time\"], desc: true)\n  |> limit(n: 300)",
+          "refId": "A",
+          "hide": false
+        }
+      ],
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ]
+        },
+        "sortBy": [
+          {
+            "displayName": "Time",
+            "desc": true
+          }
+        ]
+      },
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "includeByName": {},
+            "indexByName": {
+              "_time": 0,
+              "event": 1,
+              "_value": 2
+            },
+            "renameByName": {
+              "_time": "Time",
+              "event": "Event",
+              "_value": "Detail"
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false,
+            "filterable": true
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Time"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 180
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Event"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "door_opened": {
+                        "text": "Door opened",
+                        "color": "red",
+                        "index": 0
+                      },
+                      "door_closed": {
+                        "text": "Door closed",
+                        "color": "green",
+                        "index": 1
+                      },
+                      "relay_activated": {
+                        "text": "Door triggered",
+                        "color": "blue",
+                        "index": 2
+                      },
+                      "ImmidiateAlarm": {
+                        "text": "Immediate Alarm",
+                        "color": "red",
+                        "index": 3
+                      },
+                      "LeftOpenAlarm": {
+                        "text": "Left Open Alarm",
+                        "color": "orange",
+                        "index": 4
+                      },
+                      "auto_close_flipped": {
+                        "text": "Auto-close changed",
+                        "color": "text",
+                        "index": 5
+                      },
+                      "auto_close_locked": {
+                        "text": "Auto-close locked",
+                        "color": "text",
+                        "index": 6
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": 18,
+      "type": "row",
+      "title": "Device health",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 23
+      },
+      "collapsed": true,
+      "panels": [
+        {
+          "id": 14,
+          "type": "timeseries",
+          "title": "Wi-Fi signal",
+          "description": "RSSI over time. Regular deep dips usually mean interference or a marginal antenna position.",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${DS_INFLUXDB}"
+          },
+          "gridPos": {
+            "h": 7,
+            "w": 12,
+            "x": 0,
+            "y": 24
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "influxdb",
+                "uid": "${DS_INFLUXDB}"
+              },
+              "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"wifi_status_garage_door\" and r._field == \"rssi\")\n  |> filter(fn: (r) => r.device =~ /^${device:regex}$/ and r.SSID =~ /^${ssid:regex}$/)\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> keep(columns: [\"_time\", \"_value\"])",
+              "refId": "A",
+              "hide": false
+            }
+          ],
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true,
+              "calcs": []
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "none"
+            }
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "dBm",
+              "min": null,
+              "max": null,
+              "decimals": 0,
+              "mappings": [],
+              "color": {
+                "mode": "palette-classic"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "text",
+                    "value": null
+                  }
+                ]
+              },
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "lineWidth": 2,
+                "fillOpacity": 10,
+                "showPoints": "never",
+                "pointSize": 5,
+                "spanNulls": true,
+                "gradientMode": "opacity",
+                "axisPlacement": "auto",
+                "axisLabel": "",
+                "axisSoftMin": null,
+                "barAlignment": 0,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "stacking": {
+                  "mode": "none",
+                  "group": "A"
+                },
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                },
+                "insertNulls": false
+              }
+            },
+            "overrides": []
+          }
+        },
+        {
+          "id": 15,
+          "type": "timeseries",
+          "title": "Chip temperature",
+          "description": "Internal die temperature. Sustained readings above ~80 °C in a hot garage are worth improving ventilation for.",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${DS_INFLUXDB}"
+          },
+          "gridPos": {
+            "h": 7,
+            "w": 6,
+            "x": 12,
+            "y": 24
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "influxdb",
+                "uid": "${DS_INFLUXDB}"
+              },
+              "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"garage_device\" and r._field == \"temp_c\")\n  |> filter(fn: (r) => r.device =~ /^${device:regex}$/ and r.SSID =~ /^${ssid:regex}$/)\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> keep(columns: [\"_time\", \"_value\"])",
+              "refId": "A",
+              "hide": false
+            }
+          ],
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true,
+              "calcs": []
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "none"
+            }
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "celsius",
+              "min": null,
+              "max": null,
+              "decimals": 1,
+              "mappings": [],
+              "color": {
+                "mode": "palette-classic"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "orange",
+                    "value": 70
+                  },
+                  {
+                    "color": "red",
+                    "value": 85
+                  }
+                ]
+              },
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "lineWidth": 2,
+                "fillOpacity": 10,
+                "showPoints": "never",
+                "pointSize": 5,
+                "spanNulls": true,
+                "gradientMode": "opacity",
+                "axisPlacement": "auto",
+                "axisLabel": "",
+                "axisSoftMin": null,
+                "barAlignment": 0,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "stacking": {
+                  "mode": "none",
+                  "group": "A"
+                },
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                },
+                "insertNulls": false
+              }
+            },
+            "overrides": []
+          }
+        },
+        {
+          "id": 16,
+          "type": "timeseries",
+          "title": "Free memory",
+          "description": "Free heap. A steady downward slope over days would indicate a leak; a flat line is healthy.",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${DS_INFLUXDB}"
+          },
+          "gridPos": {
+            "h": 7,
+            "w": 6,
+            "x": 18,
+            "y": 24
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "influxdb",
+                "uid": "${DS_INFLUXDB}"
+              },
+              "query": "from(bucket: \"${bucket}\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"garage_device\" and r._field == \"heap_free\")\n  |> filter(fn: (r) => r.device =~ /^${device:regex}$/ and r.SSID =~ /^${ssid:regex}$/)\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> keep(columns: [\"_time\", \"_value\"])",
+              "refId": "A",
+              "hide": false
+            }
+          ],
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true,
+              "calcs": []
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "none"
+            }
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "bytes",
+              "min": null,
+              "max": null,
+              "decimals": 0,
+              "mappings": [],
+              "color": {
+                "mode": "palette-classic"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "text",
+                    "value": null
+                  }
+                ]
+              },
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "lineWidth": 2,
+                "fillOpacity": 10,
+                "showPoints": "never",
+                "pointSize": 5,
+                "spanNulls": true,
+                "gradientMode": "opacity",
+                "axisPlacement": "auto",
+                "axisLabel": "",
+                "axisSoftMin": null,
+                "barAlignment": 0,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "stacking": {
+                  "mode": "none",
+                  "group": "A"
+                },
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                },
+                "insertNulls": false
+              }
+            },
+            "overrides": []
+          }
+        },
+        {
+          "id": 17,
+          "type": "stat",
+          "title": "Uptime",
+          "description": "Time since the device last rebooted.",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${DS_INFLUXDB}"
+          },
+          "gridPos": {
+            "h": 4,
+            "w": 24,
+            "x": 0,
+            "y": 31
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "influxdb",
+                "uid": "${DS_INFLUXDB}"
+              },
+              "query": "from(bucket: \"${bucket}\")\n  |> range(start: -24h)\n  |> filter(fn: (r) => r._measurement == \"garage_device\" and r._field == \"uptime_s\")\n  |> filter(fn: (r) => r.device =~ /^${device:regex}$/ and r.SSID =~ /^${ssid:regex}$/)\n  |> last()\n  |> keep(columns: [\"_time\", \"_value\"])",
+              "refId": "A",
+              "hide": false
+            }
+          ],
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "orientation": "auto",
+            "textMode": "auto",
+            "colorMode": "value",
+            "graphMode": "none",
+            "justifyMode": "auto",
+            "wideLayout": true,
+            "showPercentChange": false,
+            "percentChangeColorMode": "standard"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s",
+              "decimals": 0,
+              "mappings": [],
+              "color": {
+                "mode": "thresholds"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "text",
+                    "value": null
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          }
+        }
+      ]
+    }
+  ],
+  "preload": false,
+  "refresh": "10s",
+  "schemaVersion": 39,
+  "tags": [
+    "garage-gadget",
+    "garage",
+    "esp32"
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "bucket",
+        "label": "Bucket",
+        "type": "textbox",
+        "description": "The InfluxDB bucket your device writes to (set in the device's Settings tab).",
+        "query": "Home",
+        "current": {
+          "text": "Home",
+          "value": "Home"
+        },
+        "options": [
+          {
+            "text": "Home",
+            "value": "Home",
+            "selected": true
+          }
+        ],
+        "hide": 0,
+        "skipUrlSync": false
+      },
+      {
+        "name": "device",
+        "label": "Device",
+        "type": "query",
+        "description": "Device name, as set on the Garage Gadget's Settings tab.",
+        "datasource": {
+          "type": "influxdb",
+          "uid": "${DS_INFLUXDB}"
+        },
+        "query": "import \"influxdata/influxdb/schema\"\nschema.tagValues(bucket: \"${bucket}\", tag: \"device\", predicate: (r) => r._measurement == \"garage door position\", start: -30d)",
+        "refresh": 1,
+        "sort": 1,
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": {
+          "text": "All",
+          "value": "$__all",
+          "selected": true
+        },
+        "options": [],
+        "hide": 0,
+        "skipUrlSync": false,
+        "definition": "device tag values"
+      },
+      {
+        "name": "ssid",
+        "label": "Wi-Fi SSID",
+        "type": "query",
+        "description": "Filters to a single Wi-Fi network. Leave on All unless you moved the device between networks.",
+        "datasource": {
+          "type": "influxdb",
+          "uid": "${DS_INFLUXDB}"
+        },
+        "query": "import \"influxdata/influxdb/schema\"\nschema.tagValues(bucket: \"${bucket}\", tag: \"SSID\", predicate: (r) => r._measurement == \"garage door position\", start: -30d)",
+        "refresh": 1,
+        "sort": 1,
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": {
+          "text": "All",
+          "value": "$__all",
+          "selected": true
+        },
+        "options": [],
+        "hide": 0,
+        "skipUrlSync": false,
+        "definition": "SSID tag values"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "timepicker": {
+    "refresh_intervals": [
+      "5s",
+      "10s",
+      "30s",
+      "1m",
+      "5m",
+      "15m",
+      "1h"
+    ]
+  },
+  "timezone": "browser",
+  "title": "Garage Gadget",
+  "uid": "garage-gadget",
+  "version": 1,
+  "weekStart": ""
+}

@@ -1,0 +1,65 @@
+## ─────────────────────────────────────────────────────────────────────
+## Garage Gadget — build defaults
+##
+## Delete `sdkconfig` (not this file) after changing anything here, then
+## rebuild, so the new defaults are picked up.
+## ─────────────────────────────────────────────────────────────────────
+
+## ── Flash and partitions ──
+CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y
+CONFIG_ESPTOOLPY_FLASHSIZE="16MB"
+CONFIG_PARTITION_TABLE_CUSTOM=y
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
+
+## ── PSRAM ──
+## The 10-day, 1-minute sample trace lives in PSRAM (~170 KB). Without it
+## the firmware still runs and automatically falls back to a 2-day window
+## in internal RAM.
+##
+## BOARD-SPECIFIC: these settings assume an ESP32-S3 with *octal* PSRAM
+## (the -R8 parts, 8 MB). On a quad-PSRAM board (-R2, 2 MB) change
+## CONFIG_SPIRAM_MODE_OCT to CONFIG_SPIRAM_MODE_QUAD. On a board with no
+## PSRAM at all, set `# CONFIG_SPIRAM is not set`.
+CONFIG_SPIRAM=y
+CONFIG_SPIRAM_MODE_OCT=y
+CONFIG_SPIRAM_SPEED_80M=y
+CONFIG_SPIRAM_USE_MALLOC=y
+
+## ── Bluetooth ──
+## Not used. Leaving it off saves roughly 400 KB of flash.
+# CONFIG_BT_ENABLED is not set
+
+## ── Networking ──
+## The dashboard polls several endpoints in parallel, so the HTTP server
+## needs more than the default socket pool.
+## Rule: httpd max_open_sockets <= LWIP_MAX_SOCKETS - 3.
+## web_server.cpp sets max_open_sockets = 9, hence 16 here.
+CONFIG_LWIP_MAX_SOCKETS=16
+CONFIG_LWIP_SO_REUSE=y
+
+## Request header budget. The stock 512 bytes is not enough for a phone:
+## mobile Chrome and Safari send a long User-Agent plus the sec-ch-ua* and
+## sec-fetch-* sets, and the block routinely lands between 700 and 1100
+## bytes. Over the limit httpd answers 431 before any handler runs, so the
+## setup page simply refuses to load — which is how this was found.
+##
+## This is a global compile-time limit, not a per-server field, and it sizes
+## one scratch buffer per server instance (two here), so the cost of the
+## headroom is about 3 KB.
+CONFIG_HTTPD_MAX_REQ_HDR_LEN=2048
+
+## SoftAP provisioning and the rescue portal both need AP+STA at once.
+CONFIG_ESP_WIFI_SOFTAP_SUPPORT=y
+
+## ── TLS ──
+## Telegram, ntfy and InfluxDB Cloud are all HTTPS; the bundled root store
+## means the user never has to paste a certificate.
+CONFIG_MBEDTLS_CERTIFICATE_BUNDLE=y
+CONFIG_MBEDTLS_CERTIFICATE_BUNDLE_DEFAULT_FULL=y
+
+## ── Tasks ──
+CONFIG_ESP_MAIN_TASK_STACK_SIZE=5120
+
+## ── Logging ──
+CONFIG_LOG_COLORS=y
+CONFIG_LOG_MAXIMUM_LEVEL_INFO=y
