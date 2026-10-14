@@ -1,3 +1,4 @@
+#include "update_check.h"
 #include "web_server.h"
 #include "app_config.h"
 #include "app_settings.h"
@@ -821,6 +822,63 @@ static esp_err_t door_handler(httpd_req_t *req)
             "{\"triggered\":false,\"reason\":\"relay did not fire\"}");
     }
     return send_json(req, nullptr, "{\"triggered\":true}");
+}
+
+/* The update notice and the project's home.
+ *
+ * Unauthenticated on purpose: it is the same information printed on the
+ * dashboard header that anyone on the LAN can already read, it reveals
+ * nothing about the installation, and the banner has to render before the
+ * owner has signed in. The check itself is a privileged action — see below. */
+static esp_err_t update_info_handler(httpd_req_t *req)
+{
+    const update_info_t *u = update_check_info();
+
+    char safe_latest[48], safe_status[160];
+    json_escape_into(safe_latest, sizeof(safe_latest), u->latest);
+    json_escape_into(safe_status, sizeof(safe_status), u->status);
+
+    char body[520];
+    int len = snprintf(body, sizeof(body),
+        "{\"enabled\":%s,\"checked\":%s,\"newer\":%s,"
+        "\"current\":\"%s\",\"latest\":\"%s\",\"status\":\"%s\","
+        "\"checkedAt\":%lld,\"repoUrl\":\"%s\",\"releaseUrl\":\"%s\"}",
+        settings_get()->update_check_enabled ? "true" : "false",
+        u->checked ? "true" : "false",
+        u->newer ? "true" : "false",
+        APP_SW_VERSION, safe_latest, safe_status,
+        (long long)u->checked_at,
+        APP_REPO_URL, APP_RELEASES_URL);
+
+    httpd_resp_set_hdr(req, "Cache-Control", "no-store");
+    httpd_resp_set_type(req, "application/json");
+    return httpd_resp_send(req, body, len);
+}
+
+/* Forces a check now. Authenticated, because it makes the device reach out to
+ * a third party on demand and an unauthenticated version would let anyone on
+ * the LAN burn the owner's GitHub rate limit. */
+static esp_err_t update_check_handler(httpd_req_t *req)
+{
+    REQUIRE_AUTH(req);
+
+    if (!settings_get()->update_check_enabled) {
+        return send_json(req, "409 Conflict",
+            "{\"ok\":false,\"status\":\"update checks are switched off\"}");
+    }
+
+    update_check_now();
+    const update_info_t *u = update_check_info();
+
+    char safe_status[160];
+    json_escape_into(safe_status, sizeof(safe_status), u->status);
+
+    char body[300];
+    snprintf(body, sizeof(body),
+        "{\"ok\":%s,\"newer\":%s,\"latest\":\"%s\",\"status\":\"%s\"}",
+        (strcmp(u->status, "ok") == 0) ? "true" : "false",
+        u->newer ? "true" : "false", u->latest, safe_status);
+    return send_json(req, nullptr, body);
 }
 
 /* Arms or disarms the relay. Its own endpoint rather than a settings field:
@@ -1858,6 +1916,8 @@ static const route_t k_routes[] = {
     { "/api/login",             HTTP_POST, login_handler            },
     { "/api/door",              HTTP_POST, door_handler             },
     { "/api/control-enable",    HTTP_POST, control_enable_handler   },
+    { "/api/update-info",       HTTP_GET,  update_info_handler      },
+    { "/api/update-check",      HTTP_POST, update_check_handler     },
     { "/api/auto-close",        HTTP_POST, auto_close_handler       },
     { "/api/auto-close-lock",   HTTP_POST, auto_close_lock_handler  },
     { "/api/auto-close-delay",  HTTP_POST, auto_close_delay_handler },

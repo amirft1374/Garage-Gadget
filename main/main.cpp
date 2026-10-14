@@ -40,6 +40,7 @@
 #include "influx_uploader.h"
 #include "magnet.h"
 #include "notifier.h"
+#include "update_check.h"
 #include "web_server.h"
 #include "wifi_manager.h"
 
@@ -146,6 +147,20 @@ static void server_monitor_task(void *arg)
 /* ── Deferred network bring-up ───────────────────────────────────────
  * Runs off the main loop so door monitoring never waits on Wi-Fi. */
 
+/* The update check does a TLS handshake, so it gets its own task rather than
+ * borrowing one sized for something else. Lowest useful priority: nothing
+ * about the door waits on it. */
+static void update_check_task(void *arg)
+{
+    (void)arg;
+    while (true) {
+        if (s_network_ready) {
+            update_check_tick();
+        }
+        vTaskDelay(pdMS_TO_TICKS(60000));
+    }
+}
+
 static void network_services_task(void *arg)
 {
     (void)arg;
@@ -171,6 +186,7 @@ static void network_services_task(void *arg)
 
     influx_uploader_reload();
     ha_mqtt_init();
+    update_check_init();
     s_network_ready = true;
 
     ESP_LOGI(TAG, "Dashboard: http://%s  ·  http://%s.local",
@@ -533,6 +549,7 @@ extern "C" void app_main(void)
     web_server_set_network_info(wifi_manager_ip(), cfg->device_name, APP_WEB_SERVER_PORT);
 
     xTaskCreate(network_services_task, "net-svc", 5120, nullptr, 4, nullptr);
+    xTaskCreate(update_check_task, "upd-check", 6144, nullptr, 2, nullptr);
     xTaskCreate(server_monitor_task, "srv-monitor", 4096, nullptr, 3, nullptr);
 
     /* ── Door state machine ── */

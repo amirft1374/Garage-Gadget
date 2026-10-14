@@ -53,7 +53,8 @@ See also: **[homeassistant/](homeassistant/)** for Home Assistant,
   door, sensors and switches by itself. See [`homeassistant/`](homeassistant/).
 - **Optional InfluxDB + Grafana** for owners who already run them. See
   [`grafana/`](grafana/).
-- **OTA firmware update** by dragging a `.bin` onto the Update tab.
+- **OTA firmware update** by dragging a `.bin` onto the Update tab, with an
+  optional daily check that tells you when a new release exists.
 
 ---
 
@@ -568,6 +569,42 @@ Verified on ESP-IDF 5.3.3, xtensa-esp-elf 13.2.0: builds clean with no
 warnings, ~1.2 MB, 62% of the 3 MB app partition free.
 
 Subsequent updates go over the air from the Update tab — no cable needed.
+
+---
+
+### Update notices
+
+**Settings — Firmware** shows the version you are running, and can tell you
+when a newer one is published.
+
+Switch on *Check GitHub for updates once a day* and the device asks
+[the releases API](https://github.com/amirft1374/Garage-Gadget/releases) once
+every 24 hours whether a newer tag exists. If it does, a notice appears at the
+top of the Control tab linking to the release page.
+
+**It never downloads or installs anything.** The device cannot tell a genuine
+release from whatever answered the request — nothing here verifies a
+signature — so pulling an executable off the internet and running it would be
+a poor trade for saving two clicks. You download the `.bin` yourself and
+upload it on the same page, exactly as before.
+
+**Off by default**, and the setup wizard asks rather than assuming. The check
+is an outbound request to a third party that reveals the device's public IP
+address, and a garage opener should not start talking to the internet on its
+own account without being asked. Nothing about the device, its configuration
+or its door is sent — it is a plain GET for a version number.
+
+If the check fails, the Firmware tab says why rather than failing silently:
+
+| What it says | Meaning |
+|---|---|
+| `no releases published yet` | The repository exists but has no release. Not an error |
+| `rate limited by GitHub (HTTP 403)` | Too many checks from your IP address. It retries in 4 hours |
+| `ESP_ERR_HTTP_CONNECT` | No route to the internet, or DNS is not resolving |
+| `up to date` | You are running the latest published release |
+
+Version tags are compared numerically, so `v10.0.0` is correctly newer than
+`v9.0.0`, and a `-rc` or `-beta` suffix is never announced as an upgrade.
 
 ---
 

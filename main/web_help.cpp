@@ -8,7 +8,7 @@
 
 #include "web_help.h"
 
-static const char k_help_0[] = R"HELP(<ul><li><strong>Door position sensing</strong> from a reed or hall sensor, read as an analogue voltage with a user-settable threshold, so it works with whatever sensor and wiring the installation happens to have.</li><li><strong>Door control</strong> — a relay pulse across the opener's manual button, behind a master switch that ships <strong>off</strong>. See Arming door control.</li><li><strong>Auto-close</strong> — shuts the door after a configurable delay, with a hard lock-off switch for when you genuinely want it left open.</li><li><strong>Two alarms</strong> — <em>Immediate</em> (the door should not be opening right now) and <em>Left Open</em> (it has overstayed its delay, and keeps escalating).</li><li><strong>Phone notifications</strong> sent straight from the device over Telegram or ntfy. No broker, no cloud account of ours, nothing to host.</li><li><strong>Its own dashboard and history</strong> — the last 10 days of charts and a long-running event log, served from the device, with no external database required.</li><li><strong>Home Assistant</strong> over MQTT, with auto-discovery: HA builds the garage door, sensors and switches by itself. See <code>homeassistant/</code>.</li><li><strong>Optional InfluxDB + Grafana</strong> for owners who already run them. See <code>grafana/</code>.</li><li><strong>OTA firmware update</strong> by dragging a <code>.bin</code> onto the Update tab.</li></ul>)HELP";
+static const char k_help_0[] = R"HELP(<ul><li><strong>Door position sensing</strong> from a reed or hall sensor, read as an analogue voltage with a user-settable threshold, so it works with whatever sensor and wiring the installation happens to have.</li><li><strong>Door control</strong> — a relay pulse across the opener's manual button, behind a master switch that ships <strong>off</strong>. See Arming door control.</li><li><strong>Auto-close</strong> — shuts the door after a configurable delay, with a hard lock-off switch for when you genuinely want it left open.</li><li><strong>Two alarms</strong> — <em>Immediate</em> (the door should not be opening right now) and <em>Left Open</em> (it has overstayed its delay, and keeps escalating).</li><li><strong>Phone notifications</strong> sent straight from the device over Telegram or ntfy. No broker, no cloud account of ours, nothing to host.</li><li><strong>Its own dashboard and history</strong> — the last 10 days of charts and a long-running event log, served from the device, with no external database required.</li><li><strong>Home Assistant</strong> over MQTT, with auto-discovery: HA builds the garage door, sensors and switches by itself. See <code>homeassistant/</code>.</li><li><strong>Optional InfluxDB + Grafana</strong> for owners who already run them. See <code>grafana/</code>.</li><li><strong>OTA firmware update</strong> by dragging a <code>.bin</code> onto the Update tab, with an optional daily check that tells you when a new release exists.</li></ul>)HELP";
 
 static const char k_help_1[] = R"HELP(<p>Built for <strong>ESP32-S3</strong> with <strong>16 MB flash</strong> and <strong>8 MB octal PSRAM</strong> (an <code>-R8</code> part), on ESP-IDF <strong>5.3</strong>.</p>
 <div class="tblWrap"><table><thead><tr><th>Function</th><th>GPIO</th><th>Direction</th><th>Notes</th></tr></thead><tbody><tr><td>Door position sensor</td><td>6</td><td><strong>analogue in</strong> (ADC1 ch5)</td><td>≥ threshold = closed. See below.</td></tr><tr><td>Relay control</td><td>18</td><td>pulse output, active low</td><td>idles as a high-Z input for safety</td></tr><tr><td>RGB status LED (SK6812)</td><td>48</td><td>output</td><td>one LED, RMT driven</td></tr></tbody></table></div>
@@ -302,7 +302,16 @@ idf.py -p &lt;PORT&gt; flash monitor</code></pre>
 <p>The first build fetches <code>led_strip</code> and <code>mdns</code> from the component registry. There is nothing to configure before building and no secrets file to create — that is the point.</p>
 <p>After changing <code>sdkconfig.defaults</code>, delete <code>sdkconfig</code> and rebuild so the new values are picked up.</p>
 <p>Verified on ESP-IDF 5.3.3, xtensa-esp-elf 13.2.0: builds clean with no warnings, ~1.2 MB, 62% of the 3 MB app partition free.</p>
-<p>Subsequent updates go over the air from the Update tab — no cable needed.</p>)HELP";
+<p>Subsequent updates go over the air from the Update tab — no cable needed.</p>
+<hr/>
+<h3>Update notices</h3>
+<p><strong>Settings — Firmware</strong> shows the version you are running, and can tell you when a newer one is published.</p>
+<p>Switch on <em>Check GitHub for updates once a day</em> and the device asks <a href="https://github.com/amirft1374/Garage-Gadget/releases" target="_blank" rel="noopener">the releases API</a> once every 24 hours whether a newer tag exists. If it does, a notice appears at the top of the Control tab linking to the release page.</p>
+<p><strong>It never downloads or installs anything.</strong> The device cannot tell a genuine release from whatever answered the request — nothing here verifies a signature — so pulling an executable off the internet and running it would be a poor trade for saving two clicks. You download the <code>.bin</code> yourself and upload it on the same page, exactly as before.</p>
+<p><strong>Off by default</strong>, and the setup wizard asks rather than assuming. The check is an outbound request to a third party that reveals the device's public IP address, and a garage opener should not start talking to the internet on its own account without being asked. Nothing about the device, its configuration or its door is sent — it is a plain GET for a version number.</p>
+<p>If the check fails, the Firmware tab says why rather than failing silently:</p>
+<div class="tblWrap"><table><thead><tr><th>What it says</th><th>Meaning</th></tr></thead><tbody><tr><td><code>no releases published yet</code></td><td>The repository exists but has no release. Not an error</td></tr><tr><td><code>rate limited by GitHub (HTTP 403)</code></td><td>Too many checks from your IP address. It retries in 4 hours</td></tr><tr><td><code>ESP_ERR_HTTP_CONNECT</code></td><td>No route to the internet, or DNS is not resolving</td></tr><tr><td><code>up to date</code></td><td>You are running the latest published release</td></tr></tbody></table></div>
+<p>Version tags are compared numerically, so <code>v10.0.0</code> is correctly newer than <code>v9.0.0</code>, and a <code>-rc</code> or <code>-beta</code> suffix is never announced as an upgrade.</p>)HELP";
 
 static const char k_help_24[] = R"HELP(<div class="tblWrap"><table><thead><tr><th>File</th><th>Responsibility</th></tr></thead><tbody><tr><td><code>main.cpp</code></td><td>startup order, and the door state machine: open/close detection, both alarms, auto-close</td></tr><tr><td><code>app_config.h</code></td><td>compile-time factory defaults. <strong>No secrets.</strong></td></tr><tr><td><code>app_settings.c/h</code></td><td>every user setting, persisted in NVS. One field table drives load, save, JSON out and JSON in</td></tr><tr><td><code>history.c/h</code></td><td>the two-tier on-device store: flash event ring + PSRAM sample ring</td></tr><tr><td><code>notifier.c/h</code></td><td>Telegram and ntfy delivery, on a worker task</td></tr><tr><td><code>door_control.c/h</code></td><td>the only place the relay fires; logs every trigger everywhere it belongs</td></tr><tr><td><code>wifi_manager.cpp/h</code></td><td>station, setup/recovery SoftAP, scanning</td></tr><tr><td><code>web_server.cpp/h</code></td><td>routing, token auth, the JSON API, OTA</td></tr><tr><td><code>web_assets.cpp/h</code></td><td>the dashboard and wizard front-ends, as flash-resident strings</td></tr><tr><td><code>influx_uploader.cpp/h</code></td><td>optional InfluxDB telemetry</td></tr><tr><td><code>magnet.cpp</code>, <code>relay.c</code>, <code>led_rgb.c</code></td><td>hardware drivers</td></tr><tr><td><code>ha_mqtt.c/h</code></td><td>Home Assistant over MQTT: discovery, state, commands</td></tr><tr><td><code>web_help.cpp/h</code></td><td>the Help tab's content — <strong>generated</strong>, see <code>tools/gen_help.py</code></td></tr><tr><td><code>partitions.csv</code></td><td>2×3 MB OTA slots + the 1 MB <code>history</code> partition</td></tr><tr><td><code>grafana/</code></td><td>optional dashboard and alert rule templates</td></tr></tbody></table></div>
 <p>Design rules worth keeping if you extend this:</p>
@@ -378,7 +387,8 @@ Secrets are redacted: API tokens appear as placeholders.
   door, sensors and switches by itself. See [`homeassistant/`](homeassistant/).
 - **Optional InfluxDB + Grafana** for owners who already run them. See
   [`grafana/`](grafana/).
-- **OTA firmware update** by dragging a `.bin` onto the Update tab.
+- **OTA firmware update** by dragging a `.bin` onto the Update tab, with an
+  optional daily check that tells you when a new release exists.
 
 ---
 
@@ -1442,6 +1452,42 @@ Verified on ESP-IDF 5.3.3, xtensa-esp-elf 13.2.0: builds clean with no
 warnings, ~1.2 MB, 62% of the 3 MB app partition free.
 
 Subsequent updates go over the air from the Update tab — no cable needed.
+
+---
+
+### Update notices
+
+**Settings — Firmware** shows the version you are running, and can tell you
+when a newer one is published.
+
+Switch on *Check GitHub for updates once a day* and the device asks
+[the releases API](https://github.com/amirft1374/Garage-Gadget/releases) once
+every 24 hours whether a newer tag exists. If it does, a notice appears at the
+top of the Control tab linking to the release page.
+
+**It never downloads or installs anything.** The device cannot tell a genuine
+release from whatever answered the request — nothing here verifies a
+signature — so pulling an executable off the internet and running it would be
+a poor trade for saving two clicks. You download the `.bin` yourself and
+upload it on the same page, exactly as before.
+
+**Off by default**, and the setup wizard asks rather than assuming. The check
+is an outbound request to a third party that reveals the device's public IP
+address, and a garage opener should not start talking to the internet on its
+own account without being asked. Nothing about the device, its configuration
+or its door is sent — it is a plain GET for a version number.
+
+If the check fails, the Firmware tab says why rather than failing silently:
+
+| What it says | Meaning |
+|---|---|
+| `no releases published yet` | The repository exists but has no release. Not an error |
+| `rate limited by GitHub (HTTP 403)` | Too many checks from your IP address. It retries in 4 hours |
+| `ESP_ERR_HTTP_CONNECT` | No route to the internet, or DNS is not resolving |
+| `up to date` | You are running the latest published release |
+
+Version tags are compared numerically, so `v10.0.0` is correctly newer than
+`v9.0.0`, and a `-rc` or `-beta` suffix is never announced as an upgrade.
 
 ---
 

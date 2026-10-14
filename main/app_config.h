@@ -17,6 +17,25 @@
 #define APP_SW_VERSION              "2.0.0"
 #define APP_PRODUCT_NAME            "Garage Gadget"
 
+/* ── Project home ───────────────────────────────────────── *
+ * Shown in the setup wizard and the dashboard footer so an owner can always
+ * find the source, the documentation and the releases for the firmware they
+ * are actually running.                                                   */
+#define APP_REPO_URL        "https://github.com/amirft1374/Garage-Gadget"
+#define APP_RELEASES_URL    APP_REPO_URL "/releases/latest"
+
+/* The release the device asks GitHub about. Only the tag is read from the
+ * reply; the link shown to the owner is APP_RELEASES_URL, built here rather
+ * than parsed out of the response — one less thing to get wrong, and it
+ * stays right even when the JSON changes shape. */
+#define APP_UPDATE_API_URL  "https://api.github.com/repos/amirft1374/Garage-Gadget/releases/latest"
+
+/* How often to ask, in hours, and how long to wait after a failure.
+ * Unauthenticated GitHub API calls are limited to 60 per hour per IP, which
+ * a daily check never approaches even with several units on one address. */
+#define APP_UPDATE_CHECK_INTERVAL_H (24)
+#define APP_UPDATE_CHECK_RETRY_H    (4)
+
 /* Default mDNS/device name. The last 4 hex digits of the MAC are appended
  * to the SoftAP SSID so several units on one bench stay distinguishable.  */
 #define APP_DEFAULT_DEVICE_NAME     "garage"

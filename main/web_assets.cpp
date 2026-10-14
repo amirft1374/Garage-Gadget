@@ -43,6 +43,11 @@ body{margin:0;padding:16px;background:var(--bg);color:var(--fg);
 #navFoot{margin-top:10px;padding-top:10px;border-top:1px solid var(--line);
   font-size:11.5px;color:var(--muted);text-align:center}
 #navDoor{font-weight:700}
+#navRepo{display:block;margin-top:8px;font-size:11.5px;color:var(--muted);text-decoration:none}
+#navRepo:hover{color:var(--accent);text-decoration:underline}
+/* An <a> styled as a button, so 'open the releases page' sits beside
+   'check now' without pretending to be a form control. */
+.btnlike{display:inline-block;text-decoration:none;text-align:center}
 #navDoor.closed{color:var(--ok)} #navDoor.open{color:var(--bad)}
 
 /* On a phone the sidebar becomes a scrollable strip along the top; a
@@ -297,6 +302,10 @@ legend{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercas
 #netWarn{flex:0 0 100%;background:rgba(210,153,34,.14);border:1px solid var(--warn);color:var(--warn);
   border-radius:10px;padding:10px 12px;font-size:12.5px;margin:10px 0 0;line-height:1.45}
 #netWarn[hidden]{display:none}
+#updBanner{flex:0 0 100%;background:rgba(47,129,247,.12);border:1px solid var(--accent);
+  color:var(--accent);border-radius:10px;padding:10px 12px;font-size:12.5px;margin:10px 0 0}
+#updBanner a{color:inherit;font-weight:600}
+#updBanner[hidden]{display:none}
 
 /* ── event log controls ── */
 #evControls{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 10px}
@@ -375,7 +384,8 @@ extern const char k_index_html[] = R"HTML(<!doctype html>
   <button class="navItem" data-t="1"><span class="ic">&#128200;</span><span>History</span></button>
   <button class="navItem" data-t="2"><span class="ic">&#9881;</span><span>Settings</span></button>
   <button class="navItem" data-t="3"><span class="ic">&#128218;</span><span>Help</span></button>
-  <div id="navFoot"><span id="navDoor">&mdash;</span></div>
+  <div id="navFoot"><span id="navDoor">&mdash;</span>
+    <a id="navRepo" href="#" target="_blank" rel="noopener noreferrer">Source &amp; releases</a></div>
 </aside>
 <main id="content">
 <div id="top">
@@ -386,6 +396,7 @@ extern const char k_index_html[] = R"HTML(<!doctype html>
   <span class="pill" id="wifiPill"><span class="dot"></span><span>Wi-Fi</span></span>
   <span class="pill" id="srvPill" hidden><span class="dot"></span><span>Server</span></span>
   <div id="netWarn" hidden></div>
+  <div id="updBanner" hidden></div>
 </div>
 
 <div class="pane on" id="p0">
@@ -868,6 +879,25 @@ extern const char k_index_html[] = R"HTML(<!doctype html>
     <div class="status" id="otaStatus">No file selected.</div>
     <div class="actions"><button id="otaBtn" class="wide" disabled>Upload &amp; flash</button></div>
   </div>
+
+  <div class="card">
+    <h2>Version</h2>
+    <div class="row"><span class="lbl">Running</span><span class="val" id="updCurrent">&mdash;</span></div>
+    <div class="row"><span class="lbl">Latest released</span><span class="val" id="updLatest">&mdash;</span></div>
+    <div class="status" id="updStatus"></div>
+
+    <div class="row"><span class="lbl">Check GitHub for updates once a day</span>
+      <label class="switch"><input type="checkbox" id="updToggle"><span class="slider"></span></label></div>
+    <span class="hint">Off by default. When on, the device asks GitHub once a day whether a
+    newer release exists and tells you here and on the Control tab. It never downloads or
+    installs anything by itself &mdash; you choose the file and upload it above. The request
+    reveals this device's public IP address to GitHub, which is why it is yours to switch on.</span>
+
+    <div class="actions">
+      <button id="updCheckBtn" class="ghost">Check now</button>
+      <a id="updRelLink" class="ghost btnlike" href="#" target="_blank" rel="noopener noreferrer">Open releases page</a>
+    </div>
+  </div>
 </div>
 </div>
 
@@ -1232,6 +1262,75 @@ async function guarded(fn, confirmTitle, confirmMsg) {
     return false;
   }
 }
+
+let updInfo = {};
+
+async function refreshUpdate() {
+  try { updInfo = await (await fetch('/api/update-info')).json(); } catch (e) { return; }
+
+  $('navRepo').href    = updInfo.repoUrl;
+  $('updRelLink').href = updInfo.releaseUrl;
+  $('updCurrent').textContent = updInfo.current || '—';
+  $('updLatest').textContent  = updInfo.latest  || '—';
+  $('updToggle').checked = !!updInfo.enabled;
+
+  /* Only shout when there is genuinely something newer. "Up to date" and
+     "could not reach GitHub" both belong on the Firmware tab, not as a
+     banner across the dashboard. */
+  const b = $('updBanner');
+  if (updInfo.newer && updInfo.latest) {
+    b.textContent = '';
+    const tag = document.createElement('strong');
+    tag.textContent = updInfo.latest;
+    b.append('Firmware ', tag, ' is available (you are running '
+      + updInfo.current + '). ');
+    const link = document.createElement('a');
+    link.href = updInfo.releaseUrl;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    link.textContent = 'Download it';
+    b.append(link, ', then upload it under Settings → Firmware.');
+    b.hidden = false;
+  } else {
+    b.hidden = true;
+  }
+
+  let st = '';
+  if (!updInfo.enabled)      st = 'Update checks are off.';
+  else if (!updInfo.checked) st = 'Not checked yet.';
+  else if (updInfo.newer)    st = 'An update is available.';
+  else if (updInfo.status === 'ok') st = 'Up to date.';
+  else                       st = 'Last check: ' + updInfo.status;
+  if (updInfo.enabled && updInfo.checkedAt) {
+    st += ' (' + fmtTime(updInfo.checkedAt) + ')';
+  }
+  setStatus('updStatus', st, updInfo.newer ? 'busy' : (updInfo.status === 'ok' ? 'ok' : ''));
+}
+
+$('updToggle').onchange = async () => {
+  const on = $('updToggle').checked;
+  try {
+    const r = await api('/api/settings', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ upd_check: on })
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+  } catch (e) {
+    $('updToggle').checked = !on;
+  }
+  await refreshUpdate();
+};
+
+$('updCheckBtn').onclick = async () => {
+  setStatus('updStatus', 'Asking GitHub…', 'busy');
+  try {
+    const j = await apiJson('/api/update-check', { method: 'POST' });
+    if (!j.ok && j.status) setStatus('updStatus', j.status, 'bad');
+  } catch (e) {
+    setStatus('updStatus', 'Failed: ' + e.message, 'bad');
+  }
+  await refreshUpdate();
+};
 
 $('armToggle').onchange = async () => {
   const on = $('armToggle').checked;
@@ -2083,6 +2182,7 @@ refreshStatus();
 setInterval(refreshStatus, 1500);
 setTimeout(() => { refreshNetwork(); setInterval(refreshNetwork, 8000); }, 300);
 setTimeout(() => { refreshLogs();    setInterval(refreshLogs, 1500); }, 600);
+setTimeout(() => { refreshUpdate();  setInterval(refreshUpdate, 60000); }, 900);
 )JS";
 
 /* ═══════════════════════════════════════════════════════════════════════
@@ -2231,6 +2331,12 @@ code{background:var(--panel2);padding:1px 5px;border-radius:4px;font-size:12.5px
   <label for="pw2">Repeat password</label>
   <input type="password" id="pw2" autocomplete="new-password"/>
   <div class="msg" id="m4"></div>
+
+  <label class="optin"><input type="checkbox" id="updOptIn"/>
+    <span>Tell me when a firmware update is available. The device asks GitHub
+    once a day and shows a notice on the dashboard. It never installs anything
+    on its own, and you can change this later under Settings &rarr; Firmware.</span></label>
+
   <div class="nav"><button class="ghost" data-b="3">Back</button><button id="finish">Finish setup</button></div>
 </div></div>
 
@@ -2246,6 +2352,8 @@ code{background:var(--panel2);padding:1px 5px;border-radius:4px;font-size:12.5px
     <p style="font-size:19px;font-weight:700;margin-bottom:14px"><code id="doneIp">&mdash;</code></p>
     <p>Reconnect your phone to your normal Wi-Fi, then open that address
     (or <code id="doneHost">http://garage.local</code>).</p>
+    <p class="repo">Source code, documentation and firmware releases:<br/>
+    <a id="doneRepo" href="#" target="_blank" rel="noopener noreferrer">github.com/amirft1374/Garage-Gadget</a></p>
   </div>
   <div id="doneWait">
     <p style="margin:0">If this does not connect within a minute, the Wi-Fi details were
@@ -2365,6 +2473,7 @@ $('finish').onclick = async () => {
     ntfy_on: $('ntfyOn').checked,
     ntfy_server: $('ntfySrv').value.trim(),
     ntfy_topic: $('ntfyTopic').value.trim(),
+    upd_check: $('updOptIn').checked,
     password: p1
   };
 
@@ -2403,6 +2512,7 @@ function watchForStationIp() {
         $('doneTitle').textContent = 'Setup complete';
         $('doneMsg').textContent = '';
         $('doneIp').textContent = 'http://' + n.ip + (n.port === 80 ? '' : ':' + n.port);
+        $('doneRepo').href = 'https://github.com/amirft1374/Garage-Gadget';
         $('doneOk').style.display = '';
         $('doneWait').style.display = 'none';
       }
@@ -2439,6 +2549,11 @@ h1{font-size:21px;margin:0 0 4px}
 h2{font-size:16px;margin:0 0 10px}
 p{color:var(--muted);font-size:13.5px;margin:0 0 14px}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px;margin-bottom:14px}
+.optin{display:flex;gap:9px;align-items:flex-start;font-size:12.5px;color:var(--muted);
+  line-height:1.5;margin:4px 0 14px;cursor:pointer}
+.optin input{width:auto;margin:2px 0 0;flex:0 0 auto}
+.repo{font-size:12.5px;color:var(--muted);margin-top:16px;padding-top:14px;
+  border-top:1px solid var(--line)}
 .banner{background:rgba(210,153,34,.14);border:1px solid var(--warn);color:var(--warn);
   border-radius:10px;padding:12px 14px;font-size:13px;margin-bottom:16px}
 label{display:block;font-size:12px;color:var(--muted);margin:0 0 4px}

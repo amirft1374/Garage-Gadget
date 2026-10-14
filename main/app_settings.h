@@ -96,6 +96,17 @@ typedef struct {
     uint32_t door_open_mv;        /* captured reading, door open           */
     bool     door_cal_valid;      /* both points captured and far enough apart */
 
+    /* ── Update notice ───────────────────────────────────── *
+     * When true the device asks GitHub once a day whether a newer release
+     * exists, and says so on the dashboard. It never downloads or installs
+     * anything — see update_check.h for why.
+     *
+     * Defaults to false. The check is an outbound request to a third party
+     * that reveals the device's public IP, and a garage opener should not
+     * start talking to the internet on its own account without being asked.
+     * The setup wizard offers it explicitly.                              */
+    bool     update_check_enabled;
+
     /* ── Relay master switch ───────────────────────────────── *
      * While false the relay is never energised, by any route: the web button,
      * auto-close, Home Assistant, MQTT. Nothing.

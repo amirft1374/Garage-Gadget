@@ -73,6 +73,7 @@ static const setting_desc_t k_fields[] = {
     { "alarm_lo",       SETTING_BOOL, F(alarm_left_open),       false,  SAN_NONE,     0,   0   },
 
     { "ctrl_on",        SETTING_BOOL, F(control_enabled),       false,  SAN_NONE,     0,   0   },
+    { "upd_check",      SETTING_BOOL, F(update_check_enabled),  false,  SAN_NONE,     0,   0   },
     { "web_url",        SETTING_STR,  F(public_url),            false,  SAN_STRIP_WS, 0,   0   },
 
     { "static_ip",      SETTING_STR,  F(static_ip),             false,  SAN_STRIP_WS, 0,   0   },

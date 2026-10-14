@@ -40,6 +40,8 @@ erased — your settings, history and calibration all survive.
 
 ---
 
+**Source code and firmware releases:** github.com/amirft1374/Garage-Gadget
+
 **Everything else is on the device.** Notifications, history, alarms, door
 calibration and Home Assistant are all explained in the **Help** tab of the
 dashboard, with no internet connection needed.
